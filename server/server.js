@@ -15,8 +15,8 @@ const app = express();
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin && process.env.NODE_ENV === 'development') {
-      console.warn('No origin header - only allowed in development');
+    if (!origin) {
+      console.warn('No origin header - allowing request');
       return callback(null, true);
     }
     
@@ -24,6 +24,7 @@ const corsOptions = {
       'http://localhost:3000',
       'https://attendance-management-2-3z0t.vercel.app',
       'https://attendance-management-mauve-nine.vercel.app',
+      'https://attendance-management-one-tan.vercel.app',
       process.env.FRONTEND_URL,
     ].filter(Boolean);
     
@@ -31,13 +32,15 @@ const corsOptions = {
     console.log('Incoming origin:', origin);
     console.log('Allowed origins:', allowedOrigins);
     
+    // Check if origin is in allowedOrigins
     if (allowedOrigins.some(allowedOrigin => {
+      if (!origin) return false;
       const normalizedOrigin = origin.toLowerCase();
       const normalizedAllowed = allowedOrigin.toLowerCase();
       return normalizedOrigin === normalizedAllowed ||
              normalizedOrigin.startsWith(normalizedAllowed.replace('https://', 'http://')) ||
              normalizedOrigin.startsWith(normalizedAllowed.replace('http://', 'https://'));
-    }) || process.env.NODE_ENV !== 'production') {
+    })) {
       return callback(null, true);
     }
     
