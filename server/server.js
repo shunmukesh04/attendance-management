@@ -15,29 +15,44 @@ const app = express();
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
+    if (!origin && process.env.NODE_ENV === 'development') {
+      console.warn('No origin header - only allowed in development');
+      return callback(null, true);
+    }
     
     const allowedOrigins = [
       'http://localhost:3000',
       'https://attendance-management-2-3z0t.vercel.app',
+      'https://attendance-management-mauve-nine.vercel.app',
       process.env.FRONTEND_URL,
     ].filter(Boolean);
     
-    if (allowedOrigins.some(allowedOrigin => 
-      origin === allowedOrigin || 
-      origin.startsWith(allowedOrigin.replace('https://', 'http://')) ||
-      origin.startsWith(allowedOrigin.replace('http://', 'https://'))
-    ) || process.env.NODE_ENV !== 'production') {
-      callback(null, true);
-    } else {
-      console.log('CORS blocked for origin:', origin);
-      callback(new Error('Not allowed by CORS'));
+    // For debugging
+    console.log('Incoming origin:', origin);
+    console.log('Allowed origins:', allowedOrigins);
+    
+    if (allowedOrigins.some(allowedOrigin => {
+      const normalizedOrigin = origin.toLowerCase();
+      const normalizedAllowed = allowedOrigin.toLowerCase();
+      return normalizedOrigin === normalizedAllowed ||
+             normalizedOrigin.startsWith(normalizedAllowed.replace('https://', 'http://')) ||
+             normalizedOrigin.startsWith(normalizedAllowed.replace('http://', 'https://'));
+    }) || process.env.NODE_ENV !== 'production') {
+      return callback(null, true);
     }
+    
+    console.error('CORS blocked for origin:', origin);
+    return callback(new Error(`Not allowed by CORS. Origin: ${origin}`), false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar'],
+  maxAge: 86400 // 24 hours
 };
+
+// Handle preflight requests
+app.options('*', cors(corsOptions));
 
 app.use(cors(corsOptions));
 app.use(express.json());
